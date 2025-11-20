@@ -1,8 +1,10 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime
 
-app = FastAPI()
+app = FastAPI(title="Portfolio Backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -12,13 +14,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class ContactMessage(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    email: EmailStr
+    subject: str = Field(..., min_length=2, max_length=150)
+    message: str = Field(..., min_length=10, max_length=5000)
+
+
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI Backend!"}
+    return {"message": "Portfolio API running"}
 
-@app.get("/api/hello")
-def hello():
-    return {"message": "Hello from the backend API!"}
+
+@app.post("/contact")
+def submit_contact(payload: ContactMessage):
+    """
+    Simple contact endpoint.
+    In a real setup, you'd send an email or store to DB. Here we just validate and echo back.
+    """
+    try:
+        # Here you could integrate email or DB; we're just acknowledging receipt
+        return {
+            "status": "success",
+            "received_at": datetime.utcnow().isoformat() + "Z",
+            "data": payload.dict(),
+            "note": "Message received. In production, this would send an email or persist to a database."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/test")
 def test_database():
